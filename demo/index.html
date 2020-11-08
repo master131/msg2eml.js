@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<!-- Polyfills for IE11 -->
-		<script>Uint8Array.prototype.slice||Object.defineProperty(Uint8Array.prototype,"slice",{value:function(r,t){return new Uint8Array(Array.prototype.slice.call(this,r,t))}});</script>
+		<script>Uint8Array.prototype.slice||Object.defineProperty(Uint8Array.prototype,"slice",{value:function(a,b){return new Uint8Array(Array.prototype.slice.call(this,a,b))}}),void 0===Function.prototype.name&&void 0!==Object.defineProperty&&Object.defineProperty(Function.prototype,"name",{get:function(){var a=/function\s([^(]{1,})\(/.exec(this.toString());return a&&1<a.length?a[1].trim():""},set:function(){}});</script>
 		<!-- https://polyfill.io/v3/polyfill.min.js?features=ArrayBuffer%2Cfetch%2CPromise%2CString.prototype.padStart%2CObject.assign%2CNumber.parseInt%2CString.prototype.endsWith -->
 		<script src="polyfill.min.js"></script>
 		<!-- https://github.com/inexorabletash/text-encoding -->
@@ -43,7 +43,7 @@
 			<div class="text-center align-self-center" style="width: 100%"><span class="lead" id="hint">Click here to select one or more files.</span></div>
 		  </div>
 		  <div class="py-3 text-center">
-			<span class="align-self-center">This conversion is performed completely in the browser and does not communicate with any external service.</span></div>
+			<span class="align-self-center">This conversion is performed completely in the browser and does not communicate with any external service.</span>
 		  </div>
 		</div>
 		<script>
@@ -61,12 +61,14 @@
 				$("#hint").text("Processing " + (i + 1) + " out of " + files.length + ", please wait...");
 				var fileReader = new FileReader();
 				fileReader.onload = function(e) {
-					msg2eml(new Blob([fileReader.result]))
+					msg2eml(fileReader.result)
 						.then(function(eml) {
+							fileReader = null;
 							saveAs(new Blob([eml], {type: "message/rfc822"}), files[i].name.replace(/\.msg$/i, ".eml"));
 							processNext(i + 1);
 						})
 						.catch(function(err) {
+							fileReader = null;
 							console.log(err);
 							alert("An error occurred while processing: " + files[i].name);
 							processNext(i + 1);
