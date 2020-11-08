@@ -1,6 +1,9 @@
 # msg2eml.js
 A javascript library to convert Outlook *.msg files to *.eml natively in the browser.
 
+## Demo
+Try it out [here](https://master131.github.io/msg2eml.js/demo/index.html).
+
 ## Installation & Building
 Make sure you have Typescript installed globally (or adjust the package.json accordingly).
 
