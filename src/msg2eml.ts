@@ -666,10 +666,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
     let headers_obj: any = {};
 
     if ('TRANSPORT_MESSAGE_HEADERS' in props) {
-        let headers = props['TRANSPORT_MESSAGE_HEADERS']
-        if (headers instanceof Array) {
-            headers = new TextDecoder("utf-8").decode(new Uint8Array(headers));
-        }
+        let headers = props['TRANSPORT_MESSAGE_HEADERS'];
         (<string>headers).split("\r\n")
                         .filter(h => h.indexOf(': ') >= 0)
                         .map(h => [h.substring(0, h.indexOf(': ')), h.substring(h.indexOf(': ') + 2)])
@@ -762,8 +759,25 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
 
 moment.locale("en");
 
-(<any>window).msg2eml = async function(blob: Blob) {
-    let arrBuffer = new Uint8Array(await blob.arrayBuffer());
+export async function msg2eml(obj: any) {
+    let arrBuffer: Uint8Array;
+    if (obj.constructor && obj.constructor.name === 'Blob') {
+        arrBuffer = new Uint8Array(await obj.arrayBuffer());
+    } else if ((obj.constructor && obj.constructor.name == 'Array') ||
+               (obj.constructor && obj.constructor.name == 'ArrayBuffer')) {
+        arrBuffer = new Uint8Array(obj);
+    } else {
+        throw 'Unknown or unsupported source type: ' + (obj.constructor ? obj.constructor.name : obj);
+    }
+    
     let result = CFB.parse(arrBuffer);
     return await load_message_stream(result, "Root Entry", true);
 };
+
+if (typeof window !== 'undefined' && window) {
+    (<any>window).msg2eml = msg2eml;
+}
+
+if (typeof module !== 'undefined' && module && module.exports) {
+    module.exports = msg2eml;
+}

@@ -20,9 +20,13 @@ This adds a function called msg2eml into the global window object.
 
 | Function Name  | Parameters                                                    | Returns                                                                             | Description             |
 |----------------|---------------------------------------------------------------|-------------------------------------------------------------------------------------|-------------------------|
-| window.msg2eml | Blob - a blob object containing the contents of the .msg file | Promise<string> - a promise which will generate the string content of the .eml file | Converts a .msg to .eml |
+| msg2eml | Blob/Array/ArrayBuffer containing the contents of the .msg file | Promise<string> - a promise which will generate the string content of the .eml file | Converts a .msg to .eml |
 
 See the demo directory for an example of this in-use.
+
+It can also be used as per below outside a browser:
+
+``var msg2eml = require('./msg2eml.bundle');``
 
 ## Thanks
 This would not be possible without all the hard work of the people who wrote a lot of the underlying libraries which msg2eml.js depends on:

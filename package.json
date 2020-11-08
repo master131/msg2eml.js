@@ -1,11 +1,11 @@
 {
   "name": "msg2eml",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "msg2eml.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && npx browserify lib/msg2eml.js -o lib/msg2eml.browserify.js -t [ babelify --presets [ @babel/preset-env ] ] && npx babel lib/msg2eml.browserify.js -o lib/dist/msg2eml.bundle.js --compact=false && npx babel lib/msg2eml.browserify.js -o lib/dist/msg2eml.min.js --no-comments --minified"
+    "build": "tsc && npx browserify lib/msg2eml.js --standalone msg2eml -o lib/msg2eml.browserify.js -t [ babelify --presets [ @babel/preset-env ] ] && npx babel lib/msg2eml.browserify.js -o lib/dist/msg2eml.bundle.js --compact=false && npx babel lib/msg2eml.browserify.js -o lib/dist/msg2eml.min.js --no-comments --minified"
   },
   "author": "",
   "license": "ISC",
