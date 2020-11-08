@@ -666,13 +666,22 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
     let headers_obj: any = {};
 
     if ('TRANSPORT_MESSAGE_HEADERS' in props) {
-        let headers = props['TRANSPORT_MESSAGE_HEADERS'];
-        (<string>headers).split("\r\n")
-                        .filter(h => h.indexOf(': ') >= 0)
-                        .map(h => [h.substring(0, h.indexOf(': ')), h.substring(h.indexOf(': ') + 2)])
-                        .filter(h => h[0] != "Content-Type")
-                        .forEach(h => headers_obj[h[0]] = h[1]);
-    } else {
+        let headers: string = props['TRANSPORT_MESSAGE_HEADERS'];
+        let header_lines = Array.from(headers.split("\r\n"));
+
+        // Ensure the transport headers are valid
+        if (header_lines.length &&
+            header_lines.filter(h => h.length && h.indexOf(': ') >= 0).length > 0) {
+            // Parse each HTTP header line and add to dictionary
+            header_lines
+                .filter(h => h.indexOf(': ') >= 0)
+                .map(h => [h.substring(0, h.indexOf(': ')), h.substring(h.indexOf(': ') + 2)])
+                .filter(h => h[0] != "Content-Type")
+                .forEach(h => headers_obj[h[0]] = h[1]);
+        }
+    }
+
+    if (Object.keys(headers_obj).length == 0) {
         // Construct common headers from metadata.
         if ("MESSAGE_DELIVERY_TIME" in props) {
             headers_obj["Date"] = moment(props["MESSAGE_DELIVERY_TIME"]).format("ddd, DD MMM YYYY HH:mm:ss ZZ")
