@@ -20,3 +20,13 @@ This adds a function called msg2eml into the global window object.
 | window.msg2eml | Blob - a blob object containing the contents of the .msg file | Promise<string> - a promise which will generate the string content of the .eml file | Converts a .msg to .eml |
 
 See the demo directory for an example of this in-use.
+
+## Thanks
+This would not be possible without all the hard work of the people who wrote a lot of the underlying libraries which msg2eml.js depends on:
+- https://github.com/JoshData/convert-outlook-msg-file
+- https://github.com/mazira/rtf-stream-parser
+- https://github.com/SheetJS/js-cfb
+- https://github.com/papnkukn/eml-format
+- https://github.com/HiraokaHyperTools/DeCompressRTF
+- https://github.com/moment/moment
+- https://github.com/peterolson/BigInteger.js
