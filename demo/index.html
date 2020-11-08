@@ -52,9 +52,10 @@
 			
 			function processNext(i) {
 				if (!files || i >= files.length) {
+					$("#hint").text("Click here to select one or more files.");
+					$('#js-upload-form').get(0).reset();
 					processing = false;
 					files = null;
-					$("#hint").text("Click here to select one or more files.");
 					return;
 				}
 				$("#hint").text("Processing " + (i + 1) + " out of " + files.length + ", please wait...");
@@ -87,10 +88,14 @@
 				processNext(0);
 			});
 			
+			$('#js-upload-files').on('change', function() {
+				if (processing) return;
+				$('#js-upload-form').submit();
+			});
+			
 			$('#js-upload-area').on('click', function() {
 				if (processing) return;
 				$('#js-upload-files').click();
-				$('#js-upload-form').submit();
 			});
 		</script>
 	</body>
