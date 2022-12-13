@@ -655,6 +655,12 @@ async function process_attachment(cfb: any, entry_name: string, msg: any) {
     });
 }
 
+function resolvePlaceholderHeaders(eml: any, headers: string | null): string {
+    return headers ? eml.toString()
+        .replace("Headers-Original: Headers-Original", headers.replace(/[\r\n]+$/, ""))
+        .replace(/To: Headers-Original(\r\n|$)/, ""): eml;
+}
+
 async function load_message_stream(cfb: any, entry_name: string, is_top_level: boolean): Promise<any> {
     // Load stream data
     let props = await parse_properties(cfb, entry_name + "/__properties_version1.0", is_top_level);
@@ -664,6 +670,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
 
     // Add the raw headers, if known.
     let headers_obj: any = {};
+    let original_headers: string | null = null;
 
     if ('TRANSPORT_MESSAGE_HEADERS' in props) {
         let headers: string = props['TRANSPORT_MESSAGE_HEADERS'];
@@ -672,12 +679,20 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
         // Ensure the transport headers are valid
         if (header_lines.length &&
             header_lines.filter(h => h.length && h.indexOf(': ') >= 0).length > 0) {
-            // Parse each HTTP header line and add to dictionary
-            header_lines
-                .filter(h => h.indexOf(': ') >= 0)
-                .map(h => [h.substring(0, h.indexOf(': ')), h.substring(h.indexOf(': ') + 2)])
-                .filter(h => h[0] != "Content-Type")
-                .forEach(h => headers_obj[h[0]] = h[1]);
+            // Put a placeholder header which will be resolved later
+            headers_obj["Headers-Original"] = "Headers-Original";
+
+            // Put a dummy To header to satisfy EML formatter
+            if (/(^|[\r\n])To: /.test(headers)) {
+                headers_obj["To"] = "Headers-Original";
+            } else if ("DISPLAY_TO" in props && props["DISPLAY_TO"]) {
+                headers_obj["To"] = (<string>props["DISPLAY_TO"]).replace(/\x00$/, "");
+            }
+
+            // Strip headers for attachments
+            original_headers = headers
+                .replace(/(^|[\r\n])\s*boundary=--[\s\S]+/, "")
+                .replace(/(^|[\r\n])Content-Type: .+(\r\n|$)/, "");
         }
     }
 
@@ -760,7 +775,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
             if (error) {
                 reject(error);
             } else {
-                resolve(eml);
+                resolve(resolvePlaceholderHeaders(eml, original_headers));
             }
         });
     });
