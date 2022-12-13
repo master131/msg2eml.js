@@ -689,10 +689,9 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
                 headers_obj["To"] = (<string>props["DISPLAY_TO"]).replace(/\x00$/, "");
             }
 
-            // Strip headers for attachments
+            // Strip headers for Content-Type
             original_headers = headers
-                .replace(/(^|[\r\n])\s*boundary=--[\s\S]+/, "")
-                .replace(/(^|[\r\n])Content-Type: .+(\r\n|$)/, "");
+                .replace(/(?=(^|\r\n))Content-Type:.+(\r\n|$)([ \t]+.+(\r\n|$))*/gm, "");
         }
     }
 
