@@ -629,7 +629,21 @@ async function process_attachment(cfb: any, entry_name: string, msg: any) {
 
     // Determine the correct filename for embedded e-mails
     if (!filename) {
-        if ("ATTACH_MIME_TAG" in props && props["ATTACH_MIME_TAG"] == "message/rfc822") {
+        // Handle clear signed email
+        if ("ATTACH_MIME_TAG" in props && props["ATTACH_MIME_TAG"] == "multipart/signed") {
+            // Decode the S/MIME message
+            let content = new TextDecoder("utf-8").decode(Buffer.from(blob));
+            
+            // Empty out the body of the email if there is a body inside the signed email
+            if (/^Content-Type: text\/(html|plain)/gm.test(content)) {
+                // Put a placeholder that will be replaced later
+                msg.html = null;
+                msg.text = "__msg2eml_signed_email__";
+                msg.signed_content = content;
+                return;
+            }
+        }
+        else if ("ATTACH_MIME_TAG" in props && props["ATTACH_MIME_TAG"] == "message/rfc822") {
             if ("DISPLAY_NAME" in props && props["DISPLAY_NAME"]) {
                 filename = props["DISPLAY_NAME"].replace(/[/\\?%*:|"<>]/g, '-') + ".eml";
             } else {
@@ -655,10 +669,23 @@ async function process_attachment(cfb: any, entry_name: string, msg: any) {
     });
 }
 
-function resolvePlaceholderHeaders(eml: any, headers: string | null): string {
-    return headers ? eml.toString()
-        .replace("Headers-Original: Headers-Original", headers.replace(/[\r\n]+$/, ""))
-        .replace(/To: Headers-Original(\r\n|$)/, ""): eml;
+function resolvePlaceholders(eml: any, headers: string | null, msg: any): string {
+    eml = eml.toString();
+
+    // Resolve placeholder headers for the current message
+    if (headers) {
+        eml = eml.toString()
+            .replace("Msg2Eml-Headers-Original: Msg2Eml-Headers-Original", headers.replace(/[\r\n]+$/, ""))
+            .replace(/To: Msg2Eml-Headers-Original(\r\n|$)/, "")
+    }
+
+    // Inject signed message into the EML in place of the placeholder body
+    if (msg.signed_content) {
+        eml = eml.replace(/Content-Type: multipart\/mixed;\r\n  boundary=.+\s+------=.+\r\nContent-Type: text\/plain; charset=utf-8\s+__msg2eml_signed_email__\s+------=.+/gm,
+            msg.signed_content);
+    }
+
+    return eml;
 }
 
 async function load_message_stream(cfb: any, entry_name: string, is_top_level: boolean): Promise<any> {
@@ -680,11 +707,11 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
         if (header_lines.length &&
             header_lines.filter(h => h.length && h.indexOf(': ') >= 0).length > 0) {
             // Put a placeholder header which will be resolved later
-            headers_obj["Headers-Original"] = "Headers-Original";
+            headers_obj["Msg2Eml-Headers-Original"] = "Msg2Eml-Headers-Original";
 
             // Put a dummy To header to satisfy EML formatter
             if (/(^|[\r\n])To: /.test(headers)) {
-                headers_obj["To"] = "Headers-Original";
+                headers_obj["To"] = "Msg2Eml-Headers-Original";
             } else if ("DISPLAY_TO" in props && props["DISPLAY_TO"]) {
                 headers_obj["To"] = (<string>props["DISPLAY_TO"]).replace(/\x00$/, "");
             }
@@ -727,7 +754,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
     // Add the plain-text body from the BODY field.
     let attachment_refs: any = {};
     if ("BODY" in props && !("RTF_COMPRESSED" in props)) {
-        msg["text"] = props["BODY"]
+        msg.text = props["BODY"];
     } else {
         // Decompress the RTF and then deencapsulate the RTF to obtain the original
         // HTML representation of the email
@@ -736,7 +763,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
         // Check if the RTF actually contains HTML tags, otherwise use plaintext
         if (new TextDecoder("utf-8").decode(rtf).indexOf("\\*\\htmltag") >= 0) {
             let html: string = <string>deEncapsulateSync(Buffer.from(rtf), { decode: iconvLite.decode }).text;
-            msg["html"] = html;
+            msg.html = html;
 
             // Detect all the inlined-attachments
             let r = /src="cid:(([^@]+)@[A-Z0-9]+\.[A-Z0-9]+)"/g;
@@ -745,7 +772,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
                 attachment_refs[m[2]] = m[1];
             }
         } else {
-            msg["text"] = props["BODY"];
+            msg.text = props["BODY"];
         }
     }
 
@@ -774,7 +801,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
             if (error) {
                 reject(error);
             } else {
-                resolve(resolvePlaceholderHeaders(eml, original_headers));
+                resolve(resolvePlaceholders(eml, original_headers, msg));
             }
         });
     });
