@@ -681,7 +681,7 @@ function resolvePlaceholders(eml: any, headers: string | null, msg: any): string
 
     // Inject signed message into the EML in place of the placeholder body
     if (msg.signed_content) {
-        eml = eml.replace(/Content-Type: multipart\/mixed;\r\n  boundary=.+\s+------=.+\r\nContent-Type: text\/plain; charset=utf-8\s+__msg2eml_signed_email__\s+------=.+/gm,
+        eml = eml.replace(/Content-Type: multipart\/mixed;\r\n  boundary=.+\s+------=.+\r\nContent-Type: text\/plain; charset=utf-8\s+__msg2eml_signed_email__\s+------=.+\r\n/gm,
             msg.signed_content);
     }
 
@@ -719,6 +719,14 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
             // Strip headers for Content-Type
             original_headers = headers
                 .replace(/(?=(^|\r\n))Content-Type:.+(\r\n|$)([ \t]+.+(\r\n|$))*/gm, "");
+
+            // Detect multipart/encrypted messages (ie. OpenPGP) and ensure the original header is used
+            // otherwise clients like Thunderbird cannot detect the signature
+            let encrypted = /^Content-Type:\s+(multipart\/encrypted;(\s+protocol=.+){0,1}(\s+boundary=.+){0,1})/gm;
+            let m = encrypted.exec(headers);
+            if (m) {
+                headers_obj["Content-Type"] = m[1];
+            }
         }
     }
 
@@ -755,7 +763,7 @@ async function load_message_stream(cfb: any, entry_name: string, is_top_level: b
     let attachment_refs: any = {};
     if ("BODY" in props && !("RTF_COMPRESSED" in props)) {
         msg.text = props["BODY"];
-    } else {
+    } else if ("RTF_COMPRESSED" in props) {
         // Decompress the RTF and then deencapsulate the RTF to obtain the original
         // HTML representation of the email
         let rtf = new Uint8Array(decompressRTF(props["RTF_COMPRESSED"]));
